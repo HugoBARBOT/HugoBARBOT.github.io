@@ -1,7 +1,22 @@
 ---
-title: "About me"
+title: "Biography"
+output:
+  html_document:
+    logo: Logo_Institut_Agro_Rennes-Angers
+    includes:
+     after_body: extLogo_Bio.html
 ---
 
-## Header
 
-Say more about you here.
+## Parcours
+
+* 2023-2026: Doctorat en statistiques (IRMAR, Institut Agro Rennes-Angers)
+* 2022-2023: Cursus Master Ingénierie (CMI) master Ingénierie Statistiques (Université de Nantes)
+* 2021: Maîtrise statistiques (semestre international à l'UQAM)
+* 2018-2021: Cursus Master Ingénierie (CMI) licence mathématiques (Université de Nantes)
+
+
+## Animation scientifique
+
+* Je fais partie du comité d'organisation du séminaire doctorant en statistique à l'IRMAR.
+  + [JDRS 2024](https://indico.math.cnrs.fr/event/11500/)

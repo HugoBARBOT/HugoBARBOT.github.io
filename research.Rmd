@@ -2,9 +2,6 @@
 title: "Research"
 ---
 
-Poster for Cobica 2024.
-<a href="Poster_Cobica2024_HB.pdf#" class="download" title="Download CV as PDF">Download</a>			
+ 
+<a href="articles/Poster_Cobica2024_HB.pdf#" class="download" title="Download poster as PDF">Poster</a>	for Cobica 2024.		
 
-## Header
-
-Say more about your CV here.
