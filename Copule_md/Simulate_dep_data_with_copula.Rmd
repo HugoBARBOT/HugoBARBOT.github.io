@@ -28,7 +28,7 @@ text-align: justify}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", echo = TRUE, results="verbatim", fig.align = 'center')
 ```
 
-This document is mainly base on a Matlab markdown from the hlep center of MathWorks (https://www.mathworks.com/help/stats/simulating-dependent-random-variables-using-copulas.html). I'm paraphrasing (copying) some sections and it also inspired me for the copula section of my poster presented in the 2024 IGDR PhD Symposium.
+This document is mainly base on a Matlab markdown from the help center of MathWorks (https://www.mathworks.com/help/stats/simulating-dependent-random-variables-using-copulas.html). I'm paraphrasing (copying) some sections and it also inspired me for the copula section of my poster presented in the 2024 IGDR PhD Symposium.
 
 These example shows how to use copulas when there are complex relationships among the variables, or when the individual variables are from different distributions. R can easily generate random values from different law for a univariate distribution with basic integrated distribution functions (`rnorm`, `rpois`, \dots) or from the `MASS` or `ExtraDistr` packages. Only few functions can generate random data from multivariate distributions, such as the multivariate normal and multivariate t. However, there is no built-in way to generate multivariate distributions for all marginal distributions, or in cases where the individual variables are from different distributions. Recently, copulas isn't anymore the toy of only economist and have become popular in simulation models for all fields.
 
