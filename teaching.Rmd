@@ -1,0 +1,7 @@
+---
+title: "Teaching"
+---
+
+## Démarche statistiques
+
+Encadrements des TD 1 à 8 à l'Institut Agro pour des M1 SAED et des L3 agronomes. De magnifiques slides de Rémi Mahmoud sont disponible [ici](https://demarche-stat-lesson.netlify.app/) (améliorant mais ne valant pas l'original de **François Husson**), les exercices sont à [cette adresse](https://agrocampusds.github.io/demarche_statistique/).

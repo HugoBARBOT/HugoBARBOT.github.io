@@ -1,7 +1,5 @@
 ---
-title: "Research"
+title: "Research interests"
 ---
 
- 
-<a href="articles/Poster_Cobica2024_HB.pdf#" class="download" title="Download poster as PDF">Poster</a>	for Cobica 2024.		
-
+To Be Done

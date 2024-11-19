@@ -1,0 +1,27 @@
+---
+title: "Publications"
+---
+
+## Articles
+
+Soon
+
+
+## Presentations and proceedings
+
+* [Slides] Multi-omic statistical inference of cellular heterogeneity - JdS and JOBIM 2024 [HAL](https://hal.science/hal-04664788)
+
+* Multi-omic statistical inference of cellular heterogeneity - JdS 2024 [HAL](https://hal.science/hal-04664748)
+
+
+## Posters
+
+* Multi-omic statistical inference of cellular heterogeneity - COBICA 2024 [HAL](https://hal.science/hal-04664694)	
+
+* Simulation of data-driven multi-omic benchmark data for cellular deconvolution methods evaluation - IGDR PhD symposium 2024 [HAL](https://hal.science/hal-04790951)	
+  + Best poster session for vulgarization.
+
+
+## Misc
+
+* [Vulgarisation Markdown] Simulating dependent random variables using copulas - <a href="Copule_md/Simulate_dep_data_with_copula.html#" class="download" title="html">Poster</a> and <a href="Copule_md/Simulate_dep_data_with_copula.Rmd#" class="download" title="Rmarkdown">Poster</a>

@@ -18,5 +18,6 @@ output:
 
 ## Animation scientifique
 
-* Je fais partie du comité d'organisation du séminaire doctorant en statistique à l'IRMAR.
+* Je fais partie du comité d'organisation du Séminaire de Statistique pour les doctorant.e.s (SSD) à l'IRMAR, comités qui a également organisées les Journées des Doctorant.e.s Rennais en Statistiques (JDRS).
+  + [SSD 2024-2025](https://irmar.univ-rennes.fr/seminars?f[0]=seminar_type%3A297)
   + [JDRS 2024](https://indico.math.cnrs.fr/event/11500/)
