@@ -11,8 +11,17 @@ navbar:
       icon: fa-user 
       href: about.html
     - text: "Research"
-      icon: fa-solid fa-file-pdf
+      icon: fa-chart-area
       href: research.html
+      menu:
+      - text: "Research interests"
+        href: research.html
+      - text: "Publications"
+        href: publication.html
+        icon: fa-file-text-o
+    - text: "Teaching"
+      href: teaching.html
+      icon: fa-laptop
 #    - text: "Blog"
 #      icon: fa-rss
 #      href: https://YOURGITHUB.github.io/blog/  # CHANGE HERE OR DELETE ALL 3 LINES 

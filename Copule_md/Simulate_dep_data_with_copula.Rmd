@@ -1,0 +1,784 @@
+---
+title: "Simulating dependent random variables using copulas"
+author: "Hugo Barbot"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+  # prettydoc::html_pretty:
+  #   self_contained: true
+  #   theme: cayman
+  #   highlight: github
+  #   toc: true
+  #   css: styles.css  # sol de GPT, ne marche pas du premier coup, je verrai plus tard
+  #   # toc_float: true
+  #   # toc_depth: 3
+  #   number_sections: true
+  #   keep_tex: yes
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", echo = TRUE, results="verbatim", fig.align = 'center')
+```
+
+This document is mainly base on a Matlab markdown from the hlep center of MathWorks (https://www.mathworks.com/help/stats/simulating-dependent-random-variables-using-copulas.html). I'm paraphrasing (copying) some sections and it also inspired me for the copula section of my poster presented in the 2024 IGDR PhD Symposium.
+
+These example shows how to use copulas when there are complex relationships among the variables, or when the individual variables are from different distributions. R can easily generate random values from different law for a univariate distribution with basic integrated distribution functions (`rnorm`, `rpois`, \dots) or from the `MASS` or `ExtraDistr` packages. Only few functions can generate random data from multivariate distributions, such as the multivariate normal and multivariate t. However, there is no built-in way to generate multivariate distributions for all marginal distributions, or in cases where the individual variables are from different distributions. Recently, copulas isn't anymore the toy of only economist and have become popular in simulation models for all fields.
+
+So, copulas defines how the joint behaviour of multiple random variables (r.v.'s) is structured, regardless of their individual distributions. It also allow us to characterise various complex forms of dependence, such as non-linear or tail dependence between multiple variables. Using a copula, a data analyst/scientist can construct a multivariate distribution by specifying marginal univariate distributions, and choosing a particular copula to provide a correlation/dependence structure between variables. Bivariate distributions, as well as distributions in higher dimensions, are possible. In this example, we discuss how to use copulas to generate dependent multivariate random data in `R`, using the `copula` and `MASS` packages.
+
+```{r libraries}
+library(tidyverse)
+theme_set(theme_light())
+
+library(copula)
+library(MASS)
+library(plotly)
+
+# For marginal histograms
+library(ggExtra)
+```
+
+
+
+# Dependence between simulation inputs
+
+One of the design decisions for a Monte-Carlo simulation is a choice of probability distributions for the random inputs. Selecting a distribution for each individual variable is often straightforward, but deciding what dependencies should exist between the inputs may not be. Ideally, input data to a simulation should reflect what is known about dependence among the real quantities being modelled. However, there may be little or no information on which to base any dependence in the simulation, and in such cases, it is a good idea to experiment with different possibilities, in order to determine the model's sensitivity.
+
+However, it can be difficult to actually generate random inputs with dependence when they have distributions that are not from a standard multivariate distribution. Further, some of the standard multivariate distributions can model only very limited types of dependence. It's always possible to make the inputs independent, and while that is a simple choice, it's not always sensible and can lead to the wrong conclusions.
+
+For example, a Monte-Carlo simulation of financial risk might have random inputs that represent different sources of insurance losses. These inputs might be modeled as lognormal random variables. A reasonable question to ask is how dependence between these two inputs affects the results of the simulation. Indeed, it might be known from real data that the same random conditions affect both sources, and ignoring that in the simulation could lead to the wrong conclusions. Similarly, the read count of two expressed genes are positive value and can be extremely dependent due to the gene regulatory network.
+
+Simulation of independent lognormal  random variables is trivial. Here, we'll use the `rmvnorm` function to generate n pairs of independent normal random variables, and then exponentiate them. Notice that the covariance matrix used here is diagonal, i.e., independence between the columns of Z.
+
+```{r ind_normal_param}
+N_samples = 1000
+mu = c(0,0)
+sigma = 0.5
+Sigma_ind = sigma^2 * matrix(
+    data = c(1,0,
+             0,1),
+    nrow = 2,
+    ncol = 2
+  )
+print("Variance-covariance matrix Sigma for independent bivariate normal data")
+Sigma_ind
+```
+
+```{r ind_normal}
+Z_ind = mvrnorm(n = N_samples, mu = mu, Sigma = Sigma_ind)
+colnames(Z_ind) = c("X1", "X2")
+
+X_ind = exp(Z_ind)
+
+ggplot(as.data.frame(X_ind)) +
+  geom_point(aes(x = X1, y = X2))
+```
+
+
+Dependent bivariate lognormal random variable's are also easy to generate, using a covariance matrix with non-zero off-diagonal terms.
+
+```{r dep_normal_param}
+rho = 0.7
+Sigma_dep = sigma^2 * matrix(
+    data = c(1  ,rho,
+             rho,1  ),
+    nrow = 2,
+    ncol = 2
+  )
+print("Variance-covariance matrix Sigma for dependent bivariate normal data")
+Sigma_dep
+```
+
+```{r dep_normal}
+Z_dep = mvrnorm(n = N_samples, mu = mu, Sigma = Sigma_dep)
+colnames(Z_dep) = c("X1", "X2")
+
+X_dep = exp(Z_dep)
+
+ggplot(as.data.frame(X_dep)) +
+  geom_point(aes(x = X1, y = X2))
+```
+
+
+It's clear that there is more of a tendency in the second dataset for large values of X1 to be associated with large values of X2, and similarly for small values. This dependence is determined by the correlation parameter, rho, of the underlying bivariate normal. The conclusions drawn from the simulation could well depend on whether or not X1 and X2 were generated with dependence or not.
+
+The bivariate lognormal distribution is a simple solution in this case, and of course easily generalizes to higher dimensions and cases where the marginal distributions are *different* lognormals. Other multivariate distributions also exist, for example, the multivariate t and the Dirichlet distributions are used to simulate dependent t and beta random variables, respectively. But the list of simple multivariate distributions is not long, and they only apply in cases where the marginals are all in the same family (or even the exact same distributions). This can be a real limitation in many situations.
+
+
+# A more general method for constructing dependent bivariate distributions
+
+Although the above construction that creates a bivariate lognormal is simple, it serves to illustrate a method which is more generally applicable. First, we generate pairs of values from a bivariate normal distribution. There is statistical dependence between these two variables, and each has a normal marginal distribution. Next, a transformation (the exponential function) is applied separately to each variable, changing the marginal distributions into lognormals. The transformed variables still have a statistical dependence.
+
+If a suitable transformation could be found, this method could be generalized to create dependent bivariate random vectors with other marginal distributions. In fact, a general method of constructing such a transformation does exist, although not as simple as just exponentiation.
+
+By definition, applying the normal Cumulative Distribution Function (CDF i.e. *fonction de répartition*) to a standard normal random variable results in a r.v. that is uniform on the interval [0, 1]. In `R`, CDF are *q* statistical function and the inverse are *p* statistical function, for example $ F_{\mathcal{N}(0,1)} =$ `qnorm` and $ F_{\mathcal{N}(0,1)}^{-1} =$ `pnorm` in our case. To see this, if $Z$ has a standard normal distribution, then the CDF of `U = pnorm(Z)` is $$ \mathbb{P}(U \leqslant u_0) = \mathbb{P}\big(F_{\mathcal{N}(0,1)}(Z) \leqslant u_0) = \mathbb{P}\big(Z \leqslant F_{\mathcal{N}(0,1)}^{-1}(u_0)) \big) = u_0$$ and that is the CDF of a U(0,1) r.v.. Histograms of some simulated normal and transformed values demonstrate that fact.
+
+```{r univar_normal_hist}
+N_samples = 1000
+z = rnorm(n = N_samples) # , mean = 0, sd = 1 <- base parameter
+
+ggplot() +
+  geom_histogram(aes(x = z)) +
+  labs(
+    title = "1000 simulated N(0,1) random values"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+```{r univar_normal_quantile_hist}
+u = pnorm(z)
+
+ggplot() +
+  geom_histogram(aes(x = u), breaks = seq(0,1,0.05)) +
+  labs(
+    title = "1000 simulated N(0,1) random values transformed to U(0,1)"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+
+Now, borrowing from the theory of univariate random number generation, applying the generelized inverse CDF (\textcolor{red}{ref}) of any distribution $F$ to a U(0,1) random variable results in a r.v. whose distribution is exactly $F$. This is known as the Inversion Method. The proof is essentially the opposite of the above proof for the forward case. Another histogram illustrates the transformation to a gamma distribution.
+
+```{r univar_normal_to_gamma_hist}
+x = qgamma(u, shape = 2, rate = 1)
+
+ggplot() +
+  geom_histogram(aes(x = x), boundary = 0) +
+  labs(
+    title = "1000 simulated N(0,1) random values transformed to U(0,1)\n then to a Gamma(2,1)"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+This two-step transformation can be applied to each variable of a standard bivariate normal, creating dependent/correlated r.v.'s with arbitrary marginal distributions. Because the transformation works on each component separately, the two resulting r.v.'s need not even have the same marginal distributions. The transformation is defined as
+$$
+\begin{eqnarray}
+  Z & = & \big[ Z_1 \ Z_2 \big] \sim \mathcal{N} \left( \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \begin{bmatrix} 1 \quad \rho \\ \rho \quad 1 \end{bmatrix} \right) \\
+  U & = & \big[ F_{\mathcal{N}(0,1)}(Z_1) \ F_{\mathcal{N}(0,1)}(Z_2) \big] \\
+  X & = & [F_1(U_1) \ F_2(U_1)] 
+\end{eqnarray}
+$$
+where $F_1$ and $F_2$ are inverse CDFs of two possibly different distributions. For example, we can generate random vectors from a bivariate distribution with $\text{Gamma}(2,1)$ and $\text{Student}(5)$ marginals.
+
+```{r dep_normal_student_gamma}
+N_samples = 1000
+mu = c(0,0)
+sigma = 0.5
+rho = 0.7
+Sigma_dep = sigma^2 * matrix(
+    data = c(1  ,rho,
+             rho,1  ),
+    nrow = 2,
+    ncol = 2
+  )
+
+Z_dep = mvrnorm(n = N_samples, mu = mu, Sigma = Sigma_dep)
+colnames(Z_dep) = c("X1", "X2")
+
+U_dep = pnorm(Z_dep)
+
+X_dep = U_dep
+X_dep[,"X1"] = qgamma(X_dep[,"X1"], shape = 2, rate = 1)
+X_dep[,"X2"] = qt(X_dep[,"X2"], df = 5)
+```
+
+
+This plot has histograms alongside a scatter plot to show both the marginal distributions, and the dependence (histograms from `ggExtra` package).
+
+```{r dep_normal_student_gamma_hist}
+p_norm_dep_stud_gamma_marg = ggplot(as.data.frame(X_dep)) +
+  geom_point(aes(x = X1, y = X2)) +
+  labs(
+    title = "1000 simulated correlate Gamma and Student values"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+p_norm_dep_stud_gamma_marg = ggMarginal(p_norm_dep_stud_gamma_marg, type = "histogram")
+p_norm_dep_stud_gamma_marg
+```
+
+
+# Rank correlation coefficients
+
+Dependence between $X_1$ and $X_2$ in this construction is determined by the correlation parameter, $\rho$, of the underlying bivariate normal. However, it is not true that the linear correlation of $X_1$ and $X_2$ is $\rho$. For example, in the original lognormal case, there is a closed form for that correlation: $$ \text{cor}\big(X_1, X_2\big) = \frac{\text{exp}(\rho * \sigma^2) - 1}{\text{exp}(\sigma^2) - 1} $$ which is strictly less than $\rho$ unless $\rho$ is exactly one. In more general cases, though, such as the Gamma/Poisson construction above, the linear correlation between $X_1$ and $X_2$ is difficult or impossible to express in terms of $\rho$, but simulations can be used to show that the same effect happens.
+
+That's because the linear correlation coefficient expresses the linear dependence between r.v.'s, and when nonlinear transformations are applied to those r.v.'s, linear correlation is not preserved. Instead, a rank correlation coefficient, such as Kendall's $\tau$ or Spearman's $\rho$, is more appropriate.
+
+Roughly speaking, these rank correlations measure the degree to which large or small values of one r.v. associate with large or small values of another. However, unlike the linear correlation coefficient, they measure the association only in terms of ranks. As a consequence, the rank correlation is preserved under any monotonic transformation. In particular, the transformation method just described preserves the rank correlation. Therefore, knowing the rank correlation of the bivariate normal $Z$ exactly determines the rank correlation of the final transformed r.v.'s $X$. While $\rho$ is still needed to parameterize the underlying bivariate normal, Kendall's $\tau$ or Spearman's $\rho$ are more useful in describing the dependence between r.v.'s, because they are invariant to the choice of marginal distribution.
+
+It turns out that for the bivariate normal, there is a simple 1-1 mapping between Kendall's $\tau$ or Spearman's $\rho$, and the linear correlation coefficient $\rho$:
+$$ 
+\begin{eqnarray}
+  \tau & = & \frac{2}{\pi} \times \text{arcsin}(\rho) & \text{or} & \rho & = & \text{sin}\left( \tau \times \frac{\pi}{2} \right) \\
+  \rho_{spearman} & = & \frac{6}{\pi} \times \text{arcsin}\left( \frac{\rho}{2} \right) & \text{or} & \rho & = & 2 \times \text{sin}\left( \rho_{spearman} \times \frac{\pi}{6} \right)
+\end{eqnarray}
+$$
+
+```{r plot_kendall_spearman}
+rho = seq(-1, 1, 0.01)
+tau = 2/pi*asin(rho)
+rho_spearman = 6/pi*asin(rho/2)
+
+ggplot() +
+  geom_line(aes(x = rho, y = rho), linetype = "dotted") +
+  geom_line(aes(x = rho, y = tau), color = "cornflowerblue") +
+  geom_line(aes(x = rho, y = rho_spearman), color = "orangered") +
+  labs(
+    x = expression("rho"),
+    y = "Rank correlation coefficient",
+    title = "Comparison between Pearson, Spearman and Kendall correlation"
+  ) +
+  scale_fill_discrete(
+    name = "Correlation",
+    # values = c("black", "cornflowerblue", "orangered"),
+    labels = c("Pearson", "Kendall", "Spearman")
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+  
+```
+
+
+Thus, it's easy to create the desired rank correlation between $X_1$ and $X_2$, regardless of their marginal distributions, by choosing the correct $\rho$ parameter value for the linear correlation between $Z_1$ and $Z_2$.
+
+Notice that for the multivariate normal distribution, Spearman's rank correlation is almost identical to the linear correlation. However, this is not true once we transform to the final random variables.
+
+
+# Copulas
+
+## Gaussian copulas
+
+The first step of the construction described above defines what is known as a copula, specifically, a Gaussian copula. A bivariate copula is simply a probability distribution on two random variables, each of whose marginal distributions is uniform. These two variables may be completely independent, deterministically related (e.g., $U_2$ = $U_1$), or anything in between. The family of bivariate Gaussian copulas is parameterized by $R = \begin{bmatrix} 1 \quad \rho \\ \rho \quad 1 \end{bmatrix}$, the linear correlation matrix. $U_1$ and $U_2$ approach linear dependence as $\rho$ approaches +/- 1, and approach complete independence as $\rho$ approaches zero.
+
+Scatter plots of some simulated random values for various levels of rho illustrate the range of different possibilities for Gaussian copulas:
+
+```{r bivar_Gauss_copula_diff_rho}
+N_samples = 1000
+mu = c(0,0)
+sigma = 1
+
+rhos = c(0.8, 0.1, -0.1, -0.8)
+Z_dep = matrix(NA, nrow = N_samples*length(rhos), ncol = 3)
+colnames(Z_dep) = c("X1", "X2", "rho")
+
+for (rho in rhos) {
+  
+  Sigma_dep = sigma^2 * matrix(
+    data = c(1  ,rho,
+             rho,1  ),
+    nrow = 2,
+    ncol = 2
+  )
+  rows_i = 1:1000 + 1000*(which(rho == rhos)-1)
+  
+  Z_dep[rows_i, c("X1", "X2")] =  mvrnorm(n = N_samples, mu = mu, Sigma = Sigma_dep)
+  Z_dep[rows_i, "rho"] = rep(rho, times = N_samples)
+}
+
+
+U_dep = as.data.frame(Z_dep)
+U_dep$X1 = pnorm(U_dep$X1)
+U_dep$X2 = pnorm(U_dep$X2)
+U_dep$rho = as.factor(U_dep$rho)
+colnames(U_dep) = c("U1", "U2", "rho")
+
+ggplot(U_dep) +
+  facet_wrap( ~ rho) +
+  geom_point(aes(x = U1, y = U2)) +
+  labs(
+    title = "Bivariate Gaussian copula for different values of rho"
+  )
+```
+
+The dependence between $U_1$ and $U_2$ is completely separate from the marginal distributions of $X_1 = F_1^{-1}(U_1)$ and $X_2 = F_2^{-1}(U_2)$. $X_1$ and $X_2$ can be given any marginal distributions, and still have the same rank correlation. This is one of the main appeals of copulas, they allow this separate specification of dependence and marginal distribution. This propoertie is exactly what define Sklar's theorem \textcolor{red}{ref}, which can be read with more understanding following previous examples.
+
+${\bf Theorem:}$ Every multivariate cumulative distribution function $$ H(x_1, \dots, x_d) = \mathbb{P}\big[ X_1 \leqslant x_1, \dots, X_d \leqslant x_d \big] $$ of a random vector $(X_1 ,\dots, X_d)$ can be expressed in terms of its marginals $F_i(x_i) = \mathbb{P}\big[ X_i \leqslant x_i \big]$ and a copula $C$. Indeed $$ H(x_1, \dots, x_d) = C\big( F_1(x_1), \dots, F_d(x_d) \big) $$.
+
+
+## Student Copulas
+
+A different family of copulas can be constructed by starting from a bivariate Student ($t$) distribution, and transforming using the corresponding $t$ CDF. The bivariate $t$ distribution is parameterized with $R$, the linear correlation matrix, and $\nu$, the degrees of freedom. Thus, for example, we can speak of a $t(1)$ or a $t(5)$ copula, based on the multivariate $t$ with one and five degrees of freedom, respectively.
+
+Scatter plots of some simulated random values for various levels of rho illustrate the range of different possibilities for $t(1)$ and $t(1)$ copulas:
+
+```{r bivar_Student_copula_diff_rho_dll1}
+N_samples = 1000
+nu = 1
+
+rhos = c(0.8, 0.1, -0.1, -0.8)
+U_dep = data.frame(matrix(NA, nrow = N_samples*length(rhos), ncol = 3))
+colnames(U_dep) = c("U1", "U2", "rho")
+
+for (rho in rhos) {
+  
+  rows_i = 1:1000 + 1000*(which(rho == rhos)-1)
+  
+  Student_copula = tCopula(param = rho, dim = 2, df = nu)
+  # getSigma(Student_copula) 
+  U_dep[rows_i, c("U1", "U2")] = rCopula(N_samples, Student_copula)
+  U_dep[rows_i, "rho"] = rep(rho, times = N_samples)
+}
+
+U_dep$rho = as.factor(U_dep$rho)
+
+ggplot(U_dep) +
+  facet_wrap( ~ rho) +
+  geom_point(aes(x = U1, y = U2)) +
+  labs(
+    title = "Bivariate Student (t) copula for different values of rho with 1 degree of freedom"
+  )
+```
+
+```{r bivar_Student_copula_diff_rho_dll5}
+N_samples = 1000
+nu = 5
+
+rhos = c(0.8, 0.1, -0.1, -0.8)
+U_dep = data.frame(matrix(NA, nrow = N_samples*length(rhos), ncol = 3))
+colnames(U_dep) = c("U1", "U2", "rho")
+
+for (rho in rhos) {
+  
+  rows_i = 1:1000 + 1000*(which(rho == rhos)-1)
+  
+  Student_copula = tCopula(param = rho, dim = 2, df = nu)
+  # getSigma(Student_copula) 
+  U_dep[rows_i, c("U1", "U2")] = rCopula(N_samples, Student_copula)
+  U_dep[rows_i, "rho"] = rep(rho, times = N_samples)
+}
+
+U_dep$rho = as.factor(U_dep$rho)
+
+ggplot(U_dep) +
+  facet_wrap( ~ rho) +
+  geom_point(aes(x = U1, y = U2)) +
+  labs(
+    title = "Bivariate Student (t) copula for different values of rho with 5 degrees of freedom"
+  )
+```
+
+A $t$ copula has uniform marginal distributions for $U_1$ and $U_2$, just as a Gaussian copula does. The rank correlation $\tau$ or Spearman $\rho$ between components in a $t$ copula is also the same function of $\rho$ as for a Gaussian. However, as these plots demonstrate, a $t(1)$ copula differs quite a bit from a Gaussian copula, even when their components have the same rank correlation. The difference is in their dependence structure. Not surprisingly, as the degrees of freedom parameter $\nu$ is made larger, a $t(\nu)$ copula approaches the corresponding Gaussian copula (like we can see in plots with the $t(5)$ copula).
+
+As with a Gaussian copula, any marginal distributions can be imposed over a $t$ copula. For example, using a $t$ copula with 1 degree of freedom, we can again generate random vectors from a bivariate distribution with $\text{Gamma}(2,1)$ and $\text{Student}(5)$ marginals:
+
+```{r dep_Student_poisson_gamma_hist}
+N_samples = 1000
+nu = 1
+rho = 0.7
+
+Student_copula = tCopula(param = rho, dim = 2, df = nu)
+U_dep = rCopula(N_samples, Student_copula)
+colnames(U_dep) = c("X1", "X2")
+
+X_dep = U_dep
+X_dep[,"X1"] = qgamma(X_dep[,"X1"], shape = 2, rate = 1)
+X_dep[,"X2"] = qt(X_dep[,"X2"], df = 5)
+
+p_stud_dep_pois_gamma_marg = ggplot(as.data.frame(X_dep)) +
+  geom_point(aes(x = X1, y = X2)) +
+  labs(
+    title = "1000 simulated correlate Gamma and Student values from a t(1) copula with rho = 0.7"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+p_stud_dep_pois_gamma_marg = ggMarginal(p_stud_dep_pois_gamma_marg, type = "histogram")
+p_stud_dep_pois_gamma_marg
+```
+
+Compared to the bivariate Gamma/Student distribution constructed earlier, which was based on a Gaussian copula, the distribution constructed here, based on a $t(1)$ copula, has the same marginal distributions and the same rank correlation between variables, but a very different dependence structure. This illustrates the fact that multivariate distributions are not uniquely defined by their marginal distributions, or by their correlations. The choice of a particular copula in an application may be based on actual observed data, or different copulas may be used as a way of determining the sensitivity of simulation results to the input distribution.
+
+
+## Archimedian copula
+
+Both Gaussian and Student copulas belongs to the elliptical copula family. This family captures symmetric dependency relationships between r.v.'s. They also represent relatively smooth dependencies. The Archimedian family of copula is more for asymmetric and more complex dependence structures. They used a specific generator function with "good" properties to fit the definition of a copula. This specific generator function (with only one parameter) is used to define how linked r.v.'s are, instead of a large matrix in elliptical copula. This function make the dependence structure flexible (with symmetric, asymmetric, weak and strong dependence structure), but has the flaw of his qualities: this function alone define the whole dependence relationships of the multivariate distribution.
+
+${\bf Definition:}$ A copula C is called Archimedean if it admits the representation $$ C(u_1,\dots,u_d;\theta) = \psi^{-1}\left( \psi(u_1;\theta),\dots,\psi(u_d;\theta) \right) $$ 
+
+
+*Le reste de la def fait bugger je sais pas pourquoi donc aller voir sur la page wiki*.
+
+You can see the exact function of the 5 most used Archimedian copula on the Wipipedia page \textcolor{red}{ref}.
+
+
+## Representations
+
+Thanks to \textcolor{red}{ref_Yan_2006} and his `R` `copula` package, we can easily visualize the dependence structure of copula. The most seen bivariate distribution is the Gaussian copula (bivariate normal distribution) with a contour plot where lines represent specific probability values (*mettre un graphique pour illustrer la difficulté ?*). It's not easy at first to understand a plot of a bivariate Gaussian copula where margins are from uniform distribution and not scaled and center normal distribution. Since we are more familiar with the latter, we present a non-exhaustive list of representation of elliptical and Archimedian copula with $\mathcal{N}(0,1)$ margins. 
+
+Here we don't show the code for a sake of space but the raw Rmarkdown file is accessible *qqpart à définir, sur mon site normalement*.
+
+```{r contour_copulas_norm, echo=FALSE, fig.height=6, fig.width=6}
+rho = 0.7
+marginal_distrib = c("norm", "norm")
+param_marginal_distrib = list(list(mean = 0, sd = 1), list(mean = 0, sd = 1))
+
+
+# Independent copula
+mvNN_ind = mvdc(
+  copula = indepCopula(dim = 2),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+
+# Elliptic copulas
+mvNN_Gauss = mvdc(
+  copula = normalCopula(param = rho, dim = 2),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+mvNN_Student_df1 = mvdc(
+  copula = tCopula(param = rho, dim = 2, df = 1),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+mvNN_Student_df3 = mvdc(
+  copula = tCopula(param = rho, dim = 2, df = 3),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+
+# Some Archimedian Copulas
+mvNN_Clayton = mvdc(
+  copula = claytonCopula(param = 2, dim = 2),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+mvNN_Frank = mvdc(
+  copula = frankCopula(param = 6, dim = 2),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+mvNN_Gumbel = mvdc(
+  copula = gumbelCopula(param = 2, dim = 2),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+mvNN_AMH = mvdc(
+  copula = amhCopula(param = 0.9, dim = 2),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+mvNN_Joe = mvdc(
+  copula = joeCopula(param = 2, dim = 2),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+mvNN_MO = mvdc(
+  copula = moCopula(param = c(0.5, 0.5), dim = 2),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+
+
+contour(mvNN_ind, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Independent bivariate copula with centered and\nscaled normal law for both marginals")
+```
+
+```{r test_plot_par_mfrow, echo=FALSE, fig.height=9, fig.width=9}
+par(mfrow = c(3,3))
+
+contour(mvNN_Gauss, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Gaussian copula with rho = 0.7")
+contour(mvNN_Student_df1, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Student copula with rho = 0.7 and 1 df")
+contour(mvNN_Student_df3, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Student copula with rho = 0.7 and 3 df")
+
+contour(mvNN_Clayton, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Clayton copula with param = 2")
+contour(mvNN_Frank, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Frank copula with param = 6")
+contour(mvNN_Gumbel, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Gumbel copula with param = 2")
+
+contour(mvNN_AMH, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Ali-Mikhail-Haq copula with param = 0.9")
+contour(mvNN_Joe, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Joe copula with param = 2")
+contour(mvNN_MO, pMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Marshall-Olkin copula with param = c(0.5,0.5)\n(not density but cumul. probability") # pas de densité, une proba où on comprends un peu. A retravailler
+
+par(mfrow = c(1,1))
+```
+
+```{r persp_plotly_copulas, echo=FALSE}
+
+pdf(file = NULL) # to not show the plot
+persp_plotly_mvNN_ind = persp(mvNN_ind, dMvdc, xlim=c(-3, 3), ylim=c(-3, 3), n.grid = 300) # pas trouver de parametre show = FALSE ou plot = FALSE pour ne pas montrer le plot
+
+persp_plotly_mvNN_Gauss = persp(mvNN_Gauss, dMvdc, xlim=c(-3, 3), ylim=c(-3, 3), n.grid = 300)
+persp_plotly_mvNN_Student_df1 = persp(mvNN_Student_df1, dMvdc, xlim=c(-3, 3), ylim=c(-3, 3), n.grid = 300)
+persp_plotly_mvNN_Student_df3 = persp(mvNN_Student_df3, dMvdc, xlim=c(-3, 3), ylim=c(-3, 3), n.grid = 300)
+
+persp_plotly_mvNN_Clayton = persp(mvNN_Clayton, dMvdc, xlim=c(-3, 3), ylim=c(-3, 3), n.grid = 300)
+persp_plotly_mvNN_Frank = persp(mvNN_Frank, dMvdc, xlim=c(-3, 3), ylim=c(-3, 3), n.grid = 300)
+persp_plotly_mvNN_Gumbel = persp(mvNN_Gumbel, dMvdc, xlim=c(-3, 3), ylim=c(-3, 3), n.grid = 300)
+
+persp_plotly_mvNN_AMH = persp(mvNN_AMH, dMvdc, xlim=c(-3, 3), ylim=c(-3, 3), n.grid = 300)
+persp_plotly_mvNN_Joe = persp(mvNN_Joe, dMvdc, xlim=c(-3, 3), ylim=c(-3, 3), n.grid = 300)
+dev.off()
+
+
+# Independent copula
+plot_ly(
+  x = ~persp_plotly_mvNN_ind$x,
+  y = ~persp_plotly_mvNN_ind$y,
+  z = ~persp_plotly_mvNN_ind$z,
+  type = 'surface',
+  contours = list(z = list(show = TRUE, start = 0.02, end = 0.25, size = 0.02, color = "orangered")),
+  ) %>%
+  layout(
+    title = "Independent bivariate copula with centered and\nscaled normal law for both marginals",
+    legend=list(title=list(text='My title')), # marche pas
+    scene = list(xaxis = list(title = "X_1"), 
+                 yaxis = list(title = "X_2"),
+                 zaxis = list(title = "Density"))
+  )
+
+# Elliptic copulas
+plot_ly(
+  x = ~persp_plotly_mvNN_Gauss$x,
+  y = ~persp_plotly_mvNN_Gauss$y,
+  z = ~persp_plotly_mvNN_Gauss$z,
+  type = 'surface',
+  contours = list(z = list(show = TRUE, start = 0.02, end = 0.25, size = 0.02, color = "orangered")),
+  ) %>%
+  layout(
+    title = "Gaussian copula with rho = 0.7",
+    legend=list(title=list(text='My title')), # marche pas
+    scene = list(xaxis = list(title = "X_1"), 
+                 yaxis = list(title = "X_2"),
+                 zaxis = list(title = "Density"))
+  )
+
+plot_ly(
+  x = ~persp_plotly_mvNN_Student_df1$x,
+  y = ~persp_plotly_mvNN_Student_df1$y,
+  z = ~persp_plotly_mvNN_Student_df1$z,
+  type = 'surface',
+  contours = list(z = list(show = TRUE, start = 0.02, end = 0.35, size = 0.02, color = "orangered")),
+  ) %>%
+  layout(
+    title = "Student copula with rho = 0.7 and 1 df",
+    legend=list(title=list(text='My title')), # marche pas
+    scene = list(xaxis = list(title = "X_1"), 
+                 yaxis = list(title = "X_2"),
+                 zaxis = list(title = "Density"))
+  )
+
+plot_ly(
+  x = ~persp_plotly_mvNN_Student_df3$x,
+  y = ~persp_plotly_mvNN_Student_df3$y,
+  z = ~persp_plotly_mvNN_Student_df3$z,
+  type = 'surface',
+  contours = list(z = list(show = TRUE, start = 0.02, end = 0.25, size = 0.02, color = "orangered")),
+  ) %>%
+  layout(
+    title = "Student copula with rho = 0.7 and 3 df",
+    legend=list(title=list(text='My title')), # marche pas
+    scene = list(xaxis = list(title = "X_1"), 
+                 yaxis = list(title = "X_2"),
+                 zaxis = list(title = "Density"))
+  )
+
+# Some Archimedian Copulas
+plot_ly(
+  x = ~persp_plotly_mvNN_Clayton$x,
+  y = ~persp_plotly_mvNN_Clayton$y,
+  z = ~persp_plotly_mvNN_Clayton$z,
+  type = 'surface',
+  contours = list(z = list(show = TRUE, start = 0.02, end = 0.25, size = 0.02, color = "orangered")),
+  ) %>%
+  layout(
+    title = "Clayton copula with param = 2",
+    legend=list(title=list(text='My title')), # marche pas
+    scene = list(xaxis = list(title = "X_1"), 
+                 yaxis = list(title = "X_2"),
+                 zaxis = list(title = "Density"))
+  )
+
+plot_ly(
+  x = ~persp_plotly_mvNN_Frank$x,
+  y = ~persp_plotly_mvNN_Frank$y,
+  z = ~persp_plotly_mvNN_Frank$z,
+  type = 'surface',
+  contours = list(z = list(show = TRUE, start = 0.02, end = 0.25, size = 0.02, color = "orangered")),
+  ) %>%
+  layout(
+    title = "Frank copula with param = 6",
+    legend=list(title=list(text='My title')), # marche pas
+    scene = list(xaxis = list(title = "X_1"), 
+                 yaxis = list(title = "X_2"),
+                 zaxis = list(title = "Density"))
+  )
+
+plot_ly(
+  x = ~persp_plotly_mvNN_Gumbel$x,
+  y = ~persp_plotly_mvNN_Gumbel$y,
+  z = ~persp_plotly_mvNN_Gumbel$z,
+  type = 'surface',
+  contours = list(z = list(show = TRUE, start = 0.02, end = 0.25, size = 0.02, color = "orangered")),
+  ) %>%
+  layout(
+    title = "Gumbel copula with param = 2",
+    legend=list(title=list(text='My title')), # marche pas
+    scene = list(xaxis = list(title = "X_1"), 
+                 yaxis = list(title = "X_2"),
+                 zaxis = list(title = "Density"))
+  )
+
+plot_ly(
+  x = ~persp_plotly_mvNN_AMH$x,
+  y = ~persp_plotly_mvNN_AMH$y,
+  z = ~persp_plotly_mvNN_AMH$z,
+  type = 'surface',
+  contours = list(z = list(show = TRUE, start = 0.02, end = 0.25, size = 0.02, color = "orangered")),
+  ) %>%
+  layout(
+    title = "Ali-Mikhail-Haq copula with param = 0.9",
+    legend=list(title=list(text='My title')), # marche pas
+    scene = list(xaxis = list(title = "X_1"), 
+                 yaxis = list(title = "X_2"),
+                 zaxis = list(title = "Density"))
+  )
+
+plot_ly(
+  x = ~persp_plotly_mvNN_Joe$x,
+  y = ~persp_plotly_mvNN_Joe$y,
+  z = ~persp_plotly_mvNN_Joe$z,
+  type = 'surface',
+  contours = list(z = list(show = TRUE, start = 0.02, end = 0.25, size = 0.02, color = "orangered")),
+  ) %>%
+  layout(
+    title = "Joe copula with param = 2",
+    legend=list(title=list(text='My title')), # marche pas
+    scene = list(xaxis = list(title = "X_1"), 
+                 yaxis = list(title = "X_2"),
+                 zaxis = list(title = "Density"))
+  )
+```
+
+
+# discrete marginal distributions
+
+Copulas have the properties to conserve the rank correlation between variables. These held only with continuous distribution since we use the inverse of the probability distribution function. We can construct the definition of the general inverse probability distribution function for discrete one, and so use discrete marginal with copulas. However the latter property cannot be assured.
+
+This plot has histograms alongside a scatter plot to show both the marginal distributions, and the dependence (histograms from `ggExtra` package).
+
+```{r dep_normal_poisson_gamma_hist}
+N_samples = 1000
+
+rho = 0.7
+marginal_distrib = c("gamma", "pois")
+param_marginal_distrib = list(list(shape = 2, rate = 1), list(lambda = 6))
+
+mvGP_Gauss = mvdc(
+  copula = normalCopula(param = rho,dim = 2),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+
+
+X_dep = rMvdc(n = N_samples, mvdc = mvGP_Gauss)
+colnames(X_dep) = c("X1","X2")
+
+p_norm_dep_pois_gamma_marg = ggplot(as.data.frame(X_dep)) +
+  geom_point(aes(x = X1, y = X2)) +
+  labs(
+    title = "1000 simulated correlate Gamma and Poisson values"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+p_norm_dep_pois_gamma_marg = ggMarginal(p_norm_dep_pois_gamma_marg, type = "histogram")
+p_norm_dep_pois_gamma_marg
+```
+
+
+# Higher-Order Copulas
+
+les copules elliptiques se généralise bien en dimensions d, mais les copules archimediennes non qu'un seul paramètre donc pas ouf
+
+It's easy to generalize elliptical copulas to a higher number of dimensions. For example, we can simulate data from a trivariate distribution with $\text{Gamma}(2,1)$, $\text{Beta}(2,1)$, and $\text{Student}(5)$ marginals using a Gaussian copula as follows.
+
+```{r trivariate_copule_param}
+N_samples = 1000
+
+rho_1_2 = 0.4
+rho_1_3 = 0.2
+rho_2_3 = -0.8
+
+# For illustration
+R = matrix(
+    data = c(1      , rho_1_2, rho_1_3,
+             rho_1_2, 1      , rho_2_3,
+             rho_1_3, rho_2_3, 1      ),
+    nrow = 3,
+    ncol = 3
+  )
+print("Correlation matrix R for dependent trivariate normal data")
+R
+```
+
+```{r trivariate_copule}
+marginal_distrib = c("gamma", "beta", "t")
+param_marginal_distrib = list(list(shape = 2, rate = 1), list(shape1 = 2, shape2 = 2), list(df = 5))
+
+mvGP_Gauss = mvdc(
+  copula = normalCopula(param = c(rho_1_2, rho_1_3, rho_2_3), dim = 3, dispstr = "un"),
+  margins = marginal_distrib,
+  paramMargins = param_marginal_distrib
+)
+
+
+X_dep = rMvdc(n = N_samples, mvdc = mvGP_Gauss)
+colnames(X_dep) = c("X1", "X2", "X3")
+
+plot_ly(
+  as.data.frame(X_dep), 
+  type = 'scatter3d',
+  x = ~X1, 
+  y = ~X2, 
+  z = ~X3,
+  marker = list(size = 2)
+) %>%
+  layout(
+    title = "Scatter of a trivariate normal copula with respectively\nGamma, Beta and Student marginal distribution"
+  )
+```
+
+Notice that the relationship between the linear correlation parameter $\rho$ and, for example, Kendall's $\tau$, holds for each entry in the correlation matrix $R$ used here. We can verify that the sample rank correlations of the data are approximately equal to the theoretical values.
+
+```{r tauTheoretical}
+tauTheoretical = 2*asin(R)/pi
+tauTheoretical
+```
+
+```{r tauSample}
+tauSample = cor(X_dep, method = 'kendall')
+tauSample
+```
+
+# Copulas and Empirical Marginal Distributions
+
+To simulate dependent multivariate data using a copula, we have seen that we need to specify
+
+1. the copula family (and any shape parameters),
+2. the rank correlations among variables, and
+3. the marginal distributions for each variable
+
+**Chercher le dataset** 
+
+
+
+
+
