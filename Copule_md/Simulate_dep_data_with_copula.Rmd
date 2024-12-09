@@ -34,7 +34,7 @@ These example shows how to use copulas when there are complex relationships amon
 
 So, copulas defines how the joint behaviour of multiple random variables (r.v.'s) is structured, regardless of their individual distributions. It also allow us to characterise various complex forms of dependence, such as non-linear or tail dependence between multiple variables. Using a copula, a data analyst/scientist can construct a multivariate distribution by specifying marginal univariate distributions, and choosing a particular copula to provide a correlation/dependence structure between variables. Bivariate distributions, as well as distributions in higher dimensions, are possible. In this example, we discuss how to use copulas to generate dependent multivariate random data in `R`, using the `copula` and `MASS` packages.
 
-```{r libraries}
+```{r libraries, message=FALSE}
 library(tidyverse)
 theme_set(theme_light())
 
@@ -236,18 +236,18 @@ tau = 2/pi*asin(rho)
 rho_spearman = 6/pi*asin(rho/2)
 
 ggplot() +
-  geom_line(aes(x = rho, y = rho), linetype = "dotted") +
-  geom_line(aes(x = rho, y = tau), color = "cornflowerblue") +
-  geom_line(aes(x = rho, y = rho_spearman), color = "orangered") +
+  geom_line(aes(x = rho, y = rho, color = "Pearson"), linetype = "dotted") +
+  geom_line(aes(x = rho, y = tau, color = "Kendall")) +
+  geom_line(aes(x = rho, y = rho_spearman, color = "Spearman")) +
   labs(
-    x = expression("rho"),
+    x = "Pearson rho",
     y = "Rank correlation coefficient",
     title = "Comparison between Pearson, Spearman and Kendall correlation"
   ) +
-  scale_fill_discrete(
+  scale_color_discrete(
     name = "Correlation",
-    # values = c("black", "cornflowerblue", "orangered"),
-    labels = c("Pearson", "Kendall", "Spearman")
+    # values = c("black", "cornflowerblue", "orangered")#,
+    # labels = c("Pearson", "Kendall", "Spearman")
   ) +
   theme(
     plot.title = element_text(hjust = 0.5)
@@ -504,7 +504,7 @@ contour(mvNN_Gumbel, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main
 
 contour(mvNN_AMH, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Ali-Mikhail-Haq copula with param = 0.9")
 contour(mvNN_Joe, dMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Joe copula with param = 2")
-contour(mvNN_MO, pMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Marshall-Olkin copula with param = c(0.5,0.5)\n(not density but cumul. probability") # pas de densité, une proba où on comprends un peu. A retravailler
+contour(mvNN_MO, pMvdc, xlim = c(-3, 3), ylim = c(-3, 3), n.grid = 300, main = "Marshall-Olkin copula with param = c(0.5,0.5)\n(not density but cumul. probability)") # pas de densité, une proba où on comprends un peu. A retravailler
 
 par(mfrow = c(1,1))
 ```
