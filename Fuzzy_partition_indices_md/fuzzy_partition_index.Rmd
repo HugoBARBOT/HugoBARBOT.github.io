@@ -1,0 +1,51 @@
+---
+title: "Clustering concordance indices for fuzzy partition based on Rand index "
+author: "Hugo Barbot"
+date: "`r Sys.Date()`"
+bibliography:
+  - biblio_fuzzy_partition.bib
+output:
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+  # prettydoc::html_pretty:
+  #   self_contained: true
+  #   theme: cayman
+  #   highlight: github
+  #   toc: true
+  #   css: styles.css  # sol de GPT, ne marche pas du premier coup, je verrai plus tard
+  #   # toc_float: true
+  #   # toc_depth: 3
+  #   number_sections: true
+  #   keep_tex: yes
+---
+
+```{=html}
+<style>
+body {text-align: justify}
+</style>
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", echo = TRUE, results="verbatim", fig.align = 'center')
+```
+
+
+# Rand, Adjusted Rand and Jaccard indices
+
+
+## Introduction and Rand index
+
+Clustering is a widely known machine learning problem in which the goal is to determnine a finite set of categories to describe the structure of a dataset according to similarities among objects. Let a clustering $C = \{C_1, C_2, \dots, C_k\}$ of $k$ subsets $C_k$ of our dataset $D = \{d_1, d_2, \dots, d_N\}$, such that $C_1 \ \cup C_2 \ \cup \dots \ \cup C_k = D$. Such a collection is referred to as a *partition*, because it imposes to the dataset a partitioning of its object into subsets (clusters/components). When all subsets are mutually disjoint, i.e. $C_i \cap C_l = \varnothing, \ \forall i,l \in {1,\dots,k} \ (i \neq l)$, the partition is said to be of *hard* type. A hard partition of $N$ objects into a certain number $k$ of disjoint subsets (called clusters in the case of hard type partition) can be represented by a $k \times N$ *partition matrix* whose element $p_{ij}$ is either 1 if the $j^{th}$ object belongs to the $i^{th}$ cluster or 0 otherwise, i.e.:
+
+$$P = [p_{ij}]_{k \times N}; \ \sum_{i=1}^k p_{ij} = 1 \quad \forall j \in \{1,\dots,N\}$$
+
+A problem that is often of interest is that of compairing two partitions of a given dataset, possibly with different numbers ($k$ and $\nu$) of subsets. Formally, given two partition matrices of the same dataset, $R = [r_{ij}]_{k \times N}$ and $Q = [q_{ij}]_{k \times N}$, the underlying problem is to properly measure the degree of matching between the partitions these matrices describe. In principle, it is not a trivial problem even when dealing with hard partitions matrices, for the following main reasons [@campello_generalized_2010]:
+1. the numbers of clusters$k$ and $\nu$  in respectively matrices $R$ and $Q$ are not necessarily the same,
+2. row permutations in $R$ and $Q$ do not change the partitions these matrices describe.
+
+A very appealing and stringent solution to the problem of comparing partitions is the use of so-called external validity criteria for hard clustering assessment. Such criteria are termed *external* because, in contrast to their *internal* or *relative* conterparts, they use external information (another or a reference partition) - besides the data themself - to evaluate the quality of a given clustering structure. Most external criteria, as the Rand index, is constructed from the following set of building blocks based on pairwise comparisons of data objects:
+- a: No. of pairs of data objects belonging to the same cluster in $R$
+
+
+The Rand index is an *external evaluation measure* developed by [@rand1971objective] to compare hard partitions on a set of data.

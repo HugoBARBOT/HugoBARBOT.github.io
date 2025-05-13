@@ -9,9 +9,11 @@ Soon
 
 ## Presentations and proceedings
 
-* [Slides] Multi-omic statistical inference of cellular heterogeneity - JdS and JOBIM 2024 [HAL](https://hal.science/hal-04664788)
+* Multi-omic statistical inference of cellular heterogeneity - JdS and JOBIM 2024 [proceedings](https://hal.science/hal-04664748) and [slides](https://hal.science/hal-04664788)
 
-* Multi-omic statistical inference of cellular heterogeneity - JdS 2024 [HAL](https://hal.science/hal-04664748)
+* Multi-omic statistical inference of cellular heterogeneity - IGDR SCAN 26/03/2025 [slides](https://hal.science/hal-05065011)
+
+* Inferring cellular heterogeneity with mixture models for DNA methylation rates - JdS 2025 [proceedings](https://hal.science/hal-05065027) and [slides]()
 
 
 ## Posters
