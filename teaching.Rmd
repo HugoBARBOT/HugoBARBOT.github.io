@@ -4,7 +4,7 @@ title: "Teaching"
 
 ## Back2Basic IGDR
 
-Reminders on hypothesis testing <a href="images/diapo_Back2Basic_BIS2_13_05_2025.pdf#" class="download" title="Slides">html</a>([slides](https://hal.science/hal-05065036))
+Reminders on hypothesis testing <a href="images/diapo_Back2Basic_BIS2_13_05_2025.pdf#" class="download" title="Slides">Slides</a> <!--  ([slides](https://hal.science/hal-05065036)) -->
 
 ## Démarche statistiques
 
@@ -13,4 +13,4 @@ Encadrements des TD 1 à 8 à l'Institut Agro pour des M1 SAED et des L3 agronom
 
 ## Planification experimentale : Les plans fractionnaires
 
-<a href="images/plan_fra.pdf#" class="download" title="Slides">html</a> du cours de **[François Husson](https://husson.github.io/)** (plus accessible).
+<a href="images/plan_fra.pdf#" class="download" title="Slides">Slides</a> du cours de **[François Husson](https://husson.github.io/)** (plus accessible).
