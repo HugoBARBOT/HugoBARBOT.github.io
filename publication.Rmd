@@ -4,26 +4,34 @@ title: "Publications"
 
 ## Articles
 
-Soon
+* [preprint] Nicolas Homberg, Lucie Lamothe, Elise Amblard, Hugo Barbot, Morgane Térézol, HADACA3 consortium, Anne-Catherine Letournel, Carl Herrmann, Charles Lecellier, Sebastien Dejean, Lionel Spinelli, David Causeur, Anaïs Baudot, Florent Chuffart, Yuna Blum, and Magali Richard [How to organise a scientific competition to benchmark methods and algorithms in computational biology?](https://hal.science/hal-05445539).
+
+* Elise Amblard, Vadim Bertrand, Hugo Barbot, Luis Martin Peña, Slim Karkar, Florent Chuffart, Mira Ayadi, Aurélia Baurès, Lucile Armenoult, Yasmina Kermezli. [A robust workflow to benchmark deconvolution of multi-omic data](https://hal.science/hal-05444478). Genome Biology (2025)
 
 
 ## Presentations and proceedings
 
-* Multi-omic statistical inference of cellular heterogeneity - JdS and JOBIM 2024 [proceedings](https://hal.science/hal-04664748) and [slides](https://hal.science/hal-04664788)
+* Inferring cellular heterogeneity with mixture models for DNA methylation rates - SMPGD 2026 [slides]()
+
+* Inferring cellular heterogeneity with mixture models for DNA methylation rates - JdS 2025 [proceedings](https://hal.science/hal-05065027) and [slides](https://hal.science/hal-05489385)
 
 * Multi-omic statistical inference of cellular heterogeneity - IGDR SCAN 26/03/2025 [slides](https://hal.science/hal-05065011)
 
-* Inferring cellular heterogeneity with mixture models for DNA methylation rates - JdS 2025 [proceedings](https://hal.science/hal-05065027) and [slides]()
+* Multi-omic statistical inference of cellular heterogeneity - JdS and JOBIM 2024 [proceedings](https://hal.science/hal-04664748) and [slides](https://hal.science/hal-04664788)
 
 
 ## Posters
 
-* Multi-omic statistical inference of cellular heterogeneity - COBICA 2024 [HAL](https://hal.science/hal-04664694)	
+* [Stage Elouan Deffains] Evaluation of linear modeling assumptions in a simulation context for deconvolution of multi-omic data [HAL](https://hal.science/hal-05489405)
 
 * Simulation of data-driven multi-omic benchmark data for cellular deconvolution methods evaluation - IGDR PhD symposium 2024 [HAL](https://hal.science/hal-04790951)	
   + Best poster session for vulgarization.
 
+* Multi-omic statistical inference of cellular heterogeneity - COBICA 2024 [HAL](https://hal.science/hal-04664694)
+
 
 ## Misc
+
+* [Slides] [Back2Basics - Reminder on hypothesis testing](https://hal.science/hal-05065036)
 
 * [Vulgarisation Markdown] Simulating dependent random variables using copulas - <a href="Copule_md/Simulate_dep_data_with_copula.html#" class="download" title="html">html</a> and <a href="Copule_md/Simulate_dep_data_with_copula.Rmd#" class="download" title="Rmarkdown">Rmarkdown</a>

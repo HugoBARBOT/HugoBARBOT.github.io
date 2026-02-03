@@ -1,5 +1,5 @@
 ---
-title: "Clustering concordance indices for fuzzy partition based on Rand index "
+title: "Clustering concordance indexes for fuzzy partition based on Rand index "
 author: "Hugo Barbot"
 date: "`r Sys.Date()`"
 bibliography:
@@ -31,10 +31,8 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", echo = TRUE, results="verba
 ```
 
 
-# Rand, Adjusted Rand and Jaccard indices
+# Rand, Adjusted Rand and Jaccard indexes
 
-
-## Introduction and Rand index
 
 Clustering is a widely known machine learning problem in which the goal is to determnine a finite set of categories to describe the structure of a dataset according to similarities among objects. Let a clustering $C = \{C_1, C_2, \dots, C_k\}$ of $k$ subsets $C_k$ of our dataset $D = \{d_1, d_2, \dots, d_N\}$, such that $C_1 \ \cup C_2 \ \cup \dots \ \cup C_k = D$. Such a collection is referred to as a *partition*, because it imposes to the dataset a partitioning of its object into subsets (clusters/components). When all subsets are mutually disjoint, i.e. $C_i \cap C_l = \varnothing, \ \forall i,l \in {1,\dots,k} \ (i \neq l)$, the partition is said to be of *hard* type. A hard partition of $N$ objects into a certain number $k$ of disjoint subsets (called clusters in the case of hard type partition) can be represented by a $k \times N$ *partition matrix* whose element $p_{ij}$ is either 1 if the $j^{th}$ object belongs to the $i^{th}$ cluster or 0 otherwise, i.e.:
 
@@ -45,7 +43,73 @@ A problem that is often of interest is that of compairing two partitions of a gi
 2. row permutations in $R$ and $Q$ do not change the partitions these matrices describe.
 
 A very appealing and stringent solution to the problem of comparing partitions is the use of so-called external validity criteria for hard clustering assessment. Such criteria are termed *external* because, in contrast to their *internal* or *relative* conterparts, they use external information (another or a reference partition) - besides the data themself - to evaluate the quality of a given clustering structure. Most external criteria, as the Rand index, is constructed from the following set of building blocks based on pairwise comparisons of data objects:
-- a: No. of pairs of data objects belonging to the same cluster in $R$
+- a: No. of pairs of data objects belonging to the same cluster in $R$ and to the same cluster in $Q$,
+- b: No. of pairs of data objects belonging to the same cluster in $R$ and to different cluster in $Q$,
+- c: No. of pairs of data objects belonging to different cluster in $R$ and to the same cluster in $Q$,
+- d: No. of pairs of data objects belonging to different cluster in $R$ and to different cluster in $Q$,
+
+The Rand index is an *external evaluation measure* developed by [@rand1971objective] to compare hard partitions on a set of data. This index is given by 
+$$\text{RI}(R,Q) = \frac{a+d}{a+b+c+d}$$
+and clearly exhibits the following desirable properties:
+1. RI $\in [0,1]$,
+2. RI $= 0$ iff $Q$ is completly inconsistent, i.e. $a = d = 0$,
+3. RI $= 1$ iff both partitions match, i.e. $b = c = 0$.
+
+Unfortunatly the Rand index approaches its upper limit as the number of clusters increases. There are some others known problems with the Rand index [@meilua2007Randpb]:
+- The expected value of the Rand index for two random partitions does not take a constant value,
+- It presents high variability and it concentrates in a small interval close to 1,
+- It is extremely sensitive to the number of groups, their size and also to the overall number of observations considered in each partitions.
+
+To overcome these problems, [@hubert1985ARI] proposed an adjusted version of the Rand index assuming the generalized hypergeometrical distribution as a model of randomness. In other words, this adjusted version is equal to the normalized difference of the Rand index and its expected value under the null hypothesis:
+$$\text{ARI}(R,Q) = \frac{\textit{Index} - \textit{Expected Index}}{\textit{Maximum Index} - \textit{Expected Index}} = \frac{2(ad - bc)}{b^2 + c^2 + 2ad + (a+d)(b+c)}.$$
+This index has an upper bound of 1 and takes the value 0 when the Rand index is equal to its expected value. Negative value are possible and indicate less agreement between $R$ and $Q$ than expected by chance.
 
 
-The Rand index is an *external evaluation measure* developed by [@rand1971objective] to compare hard partitions on a set of data.
+For example, lets have a reference partition $R$ and two partition, $Q_1$ and $Q_2$, with the same clustering but not the same cluster label, along with two partitions, $Q_3$ and $Q_4$, with one observation in a different cluster and with different cluster label. Those hard partitions are being vectorise, but can be easily transformed in matrix as defined earlier.
+
+```{r data_ARI_example}
+data <- structure(
+  list(
+    R = c(1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3), 
+    Q1 = c(3, 3, 3, 1, 1, 1, 1, 2, 2, 2, 2, 2), 
+    Q2 = c(2, 2, 2, 3, 3, 3, 3, 1, 1, 1, 1, 1), 
+    Q3 = c(1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 3), 
+    Q4 = c(3, 3, 3, 3, 1, 1, 1, 2, 2, 2, 2, 2)), 
+  row.names = c(NA, -12L), 
+  class = "data.frame")
+```
+
+We can use the adjusted Rand index:
+```{r ARI_example}
+mclust::adjustedRandIndex(data$R, data$R)
+mclust::adjustedRandIndex(data$R, data$Q1)
+mclust::adjustedRandIndex(data$R, data$Q2)
+mclust::adjustedRandIndex(data$R, data$Q3)
+mclust::adjustedRandIndex(data$R, data$Q4)
+```
+
+ARI is 1 in the first three conditions, the only difference being the cluster label. On the other hand, partitions $Q_3$ and $Q_4$ the same partitioning which is different from the previous one. So adjustedRandIndex(data$R, data$Q3) and adjustedRandIndex(data$x, data$Q4) is different from 1 but both are the same.
+
+
+
+Another common criticism against both the Rand index and its adjusted version is that it gives the same importance to both the agreement terms $a$ and $d$, thus making no difference between pairs of objects that are joined or separated in both partitions $R$ and $Q$. Indeed it is known that the term $d$ may dominate the others three terms, thus causing the last problem stated above. The ordinary removal of term $d$ from the Rand index results in the so-called Jaccard coefficient:
+$$\text{J}(R,Q) = \frac{a}{a+b+c}.$$
+
+All these indexes, however, allow uniquely the evaluation of hard clustering partitions, at least as they were originally formulated. Some fully equivalent set-theoretic formulation for all of them was derived and extended to more complex partitions [@campello2007fuzzy]. However, it has the shortcoming that one of the partitions must be hard. The same author proposed a general approach for comparing two data partitions with overlapping categories based on optimal transport (*mais je la trouve pas hyper optimal*).
+
+
+
+
+# Definition of more complexe partition and generalisation of previous indexes
+
+
+*voir section 2 et 3 de [@campello_generalized_2010]*
+
+*voir également section 3 de [@dambrosio_adjusted_2021]*
+
+
+
+# Normalized degree of concordance(NDC) and adjusted concordance index (ACI): extensions of the Rand index to fuzzy partition
+
+*voir section de [@dambrosio_adjusted_2021]*
+

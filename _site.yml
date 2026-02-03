@@ -45,7 +45,7 @@ navbar:
       href: mailto:hugo.barbot@institut-agro.fr                    # CHANGE HERE 
     - text: "GitHub"
       icon: fa-github
-      href: https://github.com/HugoBARBOT# CHANGE HERE 
+      href: https://github.com/HugoBARBOT # CHANGE HERE 
 output:
   html_document:
     theme: lumen
