@@ -11,7 +11,7 @@ title: "Publications"
 
 ## Presentations and proceedings
 
-* Inferring cellular heterogeneity with mixture models for DNA methylation rates - SMPGD 2026 [slides]()
+* Inferring cellular heterogeneity with mixture models for DNA methylation rates - SMPGD 2026 [slides](https://hal.science/hal-05489490)
 
 * Inferring cellular heterogeneity with mixture models for DNA methylation rates - JdS 2025 [proceedings](https://hal.science/hal-05065027) and [slides](https://hal.science/hal-05489385)
 
