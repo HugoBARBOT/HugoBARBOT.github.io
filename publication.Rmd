@@ -4,6 +4,8 @@ title: "Publications"
 
 ## Articles
 
+* [preprint] Hugo Barbot, Yuna Blum, Magali Richard and David Causeur [Inferring cellular heterogeneity with mixture models for DNA methylation rates](https://arxiv.org/abs/2606.04175).
+
 * [preprint] Nicolas Homberg, Lucie Lamothe, Elise Amblard, Hugo Barbot, Morgane Térézol, HADACA3 consortium, Anne-Catherine Letournel, Carl Herrmann, Charles Lecellier, Sebastien Dejean, Lionel Spinelli, David Causeur, Anaïs Baudot, Florent Chuffart, Yuna Blum, and Magali Richard [How to organise a scientific competition to benchmark methods and algorithms in computational biology?](https://hal.science/hal-05445539).
 
 * Elise Amblard, Vadim Bertrand, Hugo Barbot, Luis Martin Peña, Slim Karkar, Florent Chuffart, Mira Ayadi, Aurélia Baurès, Lucile Armenoult, Yasmina Kermezli. [A robust workflow to benchmark deconvolution of multi-omic data](https://hal.science/hal-05444478). Genome Biology (2025)
